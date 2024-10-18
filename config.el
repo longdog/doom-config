@@ -2,6 +2,13 @@
 (setq user-full-name "Denis Abrosimov"
       user-mail-address "denis.abrosimov@gmail.com")
 
+(if (eq initial-window-system 'x)                 ; if started by emacs command or desktop file
+    (toggle-frame-maximized)
+  (toggle-frame-fullscreen))
+
+
+;; Do not start auto start comments in new lines.
+(setq +default-want-RET-continue-comments nil)
 
 ;; Doom exposes five (optional) variables for controlling fonts in Doom:
 ;;
@@ -28,7 +35,7 @@
 ;; `load-theme' function. This is the default:
 
 (setq doom-theme 'doom-acario-light)
-(load-theme 'ef-elea-light :no-confirm)
+(load-theme 'ef-tritanopia-light :no-confirm)
 
 (defun load-doom-theme (frame)
   (select-frame frame)
@@ -47,8 +54,13 @@
 (setq org-directory "~/org/")
 
 ;; normal size on start
-(setq initial-frame-alist '((top . 1) (left . 1) (width . 143) (height . 55)))
-(add-hook 'window-setup-hook 'toggle-frame-maximized t)
+;; (setq initial-frame-alist '((top . 1) (left . 1) (width . 143) (height . 55)))
+;; (add-to-list 'initial-frame-alist '(fullscreen . maximized))
+;; (add-hook 'window-setup-hook 'toggle-frame-maximized t)
+
+;; fullscreen
+;; (setq ns-use-native-fullscreen :true)
+(add-to-list 'default-frame-alist '(fullscreen . maximized))
 
 ;; Whenever you reconfigure a package, make sure to wrap your config in an
 ;; `after!' block, otherwise Doom's defaults may override your settings. E.g.
@@ -143,7 +155,8 @@
                                     :test-suffix ".test")
   )
 
-
+;; show dot files
+(setq dired-listing-switches "-aFl --group-directories-first -v")
 
 ;; treemacs
 (map! :leader :desc "Open treemacs" "e" #'+treemacs/toggle)
@@ -156,6 +169,9 @@
 (map! :leader :desc "Go to char" "j" #'avy-goto-char)
 (map! :desc "Comment/ uncomment line" :nv "g /" #'comment-line)
 (map! :leader :desc "Go to test" "p z" #'projectile-toggle-between-implementation-and-test)
+(use-package! expreg
+  :defer t)
+(map! :desc "Region Selection" :nv "<backtab>" #'expreg-expand)
 
 (defun project-file-name (filepath)
   (s-replace "/home/denis/projects/" "" filepath))
@@ -169,3 +185,67 @@
                (prj-name (or (projectile-project-name) workspace-name))
                )
            (format (if (buffer-modified-p)  " ◉ %s %s" "  ● %s  %s") prj-name file-name)))))
+
+;; lsp
+;; disable replace next word on autocomplete
+(after! lsp-ui
+  (setq lsp-completion-default-behaviour :insert)
+  )
+
+
+(after! web-mode
+  (remove-hook 'yas-after-exit-snippet-hook #'web-mode-yas-after-exit-snippet-hook))
+
+
+;; This variable should go inside of :init, but doesn't get called at the right time.
+(use-package! lsp-tailwindcss :init (setq! lsp-tailwindcss-add-on-mode t))
+
+;; :init (setq lsp-tailwindcss-add-on-mode t)
+;; :config
+;; (add-to-list 'lsp-tailwindcss-major-modes 'typescript-tsx-mode :append)
+;; (add-to-list 'lsp-tailwindcss-major-modes 'rjsx-mode :append)
+;; :after (lsp-mode))
+
+
+;; (use-package! lsp-tailwindcss
+;;   :when (featurep! +lsp)
+;;   :after lsp-mode
+;;   :config
+;;   (setq lsp-tailwindcss-emmet-completions (featurep 'emmet-mode))
+
+;;   ;; Advice that uses a locally installed rustywind binary.
+;;   (defun +rustywind-with-local-bin (orig-fun &rest args)
+;;     (let ((lsp-tailwindcss-rustywind-command
+;;            (concat (projectile-project-root)
+;;                    "node_modules/.bin/rustywind")))
+;;       (apply orig-fun args)))
+;;   (advice-add #'lsp-tailwindcss-rustywind :around #'+rustywind-with-local-bin))
+
+;; (set-docsets! '(web-mode css-mode rjsx-mode typescript-tsx-mode) :add "Tailwind_CSS")
+;; (defun longdog/org-download-paste-clipboard (&optional use-default-filename)
+;;   (interactive "P")
+;;   (require 'org-download)
+;;   (let ((file
+;;          (if (not use-default-filename)
+;;              (read-string (format "Filename [%s]: "
+;;                                   org-download-screenshot-basename)
+;;                           nil nil org-download-screenshot-basename)
+;;            nil)))
+;;     (org-download-clipboard file)))
+
+;; (after! org-download
+;;   (setq org-download-method 'directory)
+;;   (setq org-download-image-dir "images")
+;;   (setq org-download-heading-lvl nil)
+;;   (setq org-download-timestamp "%Y%m%d-%H%M%S_")
+;;   (setq org-image-actual-width 600)
+;;   (map! :map org-mode-map
+;;         "C-c l a y" #'longdog/org-download-paste-clipboard
+;;         "C-M-y" #'longdog/org-download-paste-clipboard))
+(after! org-download
+  (setq org-download-method 'directory)
+  (setq org-download-image-dir (concat (file-name-sans-extension (buffer-file-name)) "-img"))
+  (setq org-download-image-org-width 600)
+  (setq org-download-link-format "[[file:%s]]\n"
+        org-download-abbreviate-filename-function #'file-relative-name)
+  (setq org-download-link-format-function #'org-download-link-format-function-default))
